@@ -80,6 +80,8 @@ training_dat <- training_dat %>% select(-c(fnlwgt,relationship, education))
 #########################################
 #####Start Models########################
 #########################################
+
+
 #Model 0:  Predicting <=50K for each entry because that's most common in our dataset
 training_dat %>% group_by(income) %>% summarize(n=n())
 
@@ -103,7 +105,6 @@ model.results_linear.regression <- confusionMatrix(data = income_hat, reference 
 #increased to:  accuracy = 0.84, sensitivity = 0.943, specificity = 0.5159
 
 
-
 #Model 2: Generalized Linear Model (GLM)
 train_glm <- train(income ~.,
                    method = "glm",
@@ -114,7 +115,6 @@ income_hat_glm <- predict(train_glm, testing_dat)
 
 confusionMatrix(income_hat_glm, reference = testing_dat$income)
 #Increased to Accuracy = 0.8554, Sensitivity = 0.9373, Specificity = 0.5975
-
 
 
 #Model 2: KNN
