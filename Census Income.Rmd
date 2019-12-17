@@ -9,7 +9,77 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Introduction
+
+The following report documents the methods and procedures I used to create a prediction model on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: https://www.kaggle.com/uciml/adult-census-income.  The original dataset consisted of the following 15 columns:
+* age (integer) - The age of each entry
+* workclass (string) - The workclass of each entry.  Options include: private, local government, federal government, self-employed
+* fnlwgt (integer) - The final weight of that row.  This relates to how many unique census entries were of this row's characteristics.  In order to preserve the tidy format of the dataset, I did not include the fnlwgt column in my computations.
+* education (string) - The highest form of education for each entry.  Options include: HS-grad, Masters, 10th
+* education.num (integer) - The total number of years spent in education for each entry
+* marital.status (string) - The marital status of each entry
+* occupation (string) - The occupation of each entry
+* relationship (string) - The family-relationship held by each entry.  Options include: Mother, Father, Not-in-Family, Unmarried
+* race (string) - The race of each entry
+* sex (string) - The sex of each entry
+* capital.gain (integer) - The capitol gain of each entry
+* capital.loss (integer) - The capitol loss of each entry
+* hours.per.week (integer) - The hours per week worked by each entry
+* native.country (string) - The native country of each entry
+* income (string) - The annual income of each entry as defined categorically as less than or equal to $50,000 (<=50K) and greater than $50,000 (>50K).
+
+I used the census dataset to generate a model that predicts the categorical income of an entry given the other attributes of that entry.  
+
+
+## Methods
+### Data Preparation
+```{r, echo= FALSE, message=FALSE}
+library(tidyverse)
+library(caret)
+library(ggplot2)
+library(rpart)				       
+
+library(rattle)					
+library(rpart.plot)			
+
+file <- "adult-census-income.zip"
+
+dat <- read.csv(unzip(file))
+
+```
+
+The dataset was downloaded from Kaggle.com as a zipped csv file.  I read in the dataset and examined it for dimensionality and completeness. 
+
+```{r, echo= FALSE}
+dim.dat <- dim(dat)
+dat.na <- sum(is.na(dat$income))
+message("The data has ", dim.dat[1], " rows,  ", dim.dat[2], " columns, and ", 
+        dat.na, " missing values (NA).")
+```
+
+Next, I randomly split the original dataset into training and testing datasets comprised of 90% and 10% of the original dataset, respectively.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 

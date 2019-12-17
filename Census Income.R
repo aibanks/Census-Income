@@ -1,14 +1,32 @@
+#####Update the library sections into "IF REQUIRE"
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(fastAdaboost)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(rattle)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(rpart.plot)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+
+
+
+
+
+
+
+
+
+
+
+
+
 library(tidyverse)
 library(caret)
 library(ggplot2)
-library(rpart)				       
+library(rpart)	
+library(fastAdaboost)
 
 library(rattle)					
 library(rpart.plot)			
-#library(RColorBrewer)				
-#library(party)					
-#library(partykit)
-
 
 file <- "adult-census-income.zip"
 
@@ -45,6 +63,9 @@ education_hist
 
 race_hist <- training_dat %>% ggplot(aes(race, fill = income)) + geom_histogram(stat="count", position = position_dodge())
 race_hist
+
+race.edu_graph <- training_dat %>% ggplot(aes(race, education.num, color = income)) + geom_boxplot()
+race.edu_graph
 
 workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 workclass_hist
@@ -304,12 +325,15 @@ confusionMatrix(income_hat_tree, reference = testing_dat_undersample$income)
 #Undersampled Training Set:  Accuracy = 0.7157, Sensitivity = 0.6667, Specificity = 0.8701, balanced Acc. = 0.7684
 #Undersampled Test and Training Sets:  Accuracy = 0.7707, Sens. = 0.6713, Spec = 0.8701, Balanced Acc. = 0.7707
 
+#Model 5: AdaBoost Classification Trees
+train_adaboost <- train(income ~.,
+                        method = "adaboost",
+                        data = training_dat)
 
+income_hat_adaboost <- predict(train_adaboost, testing_dat)
+confusionMatrix(income_hat_adaboost, reference = testing_dat$income)
 
-
-
-
-
+#started 17:06  stopped at 17:16 (took too long)
 
 
 
