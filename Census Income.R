@@ -170,7 +170,6 @@ train_tree_cp <- train(income ~.,
                        data = training_dat)
 
 ggplot(train_tree_cp, highlight = TRUE)
-#started at 10:22; ended ~10:24
 plot(train_tree_cp$finalModel)
 text(train_tree_cp$finalModel, cex = 0.5)
 

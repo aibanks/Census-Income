@@ -1,7 +1,7 @@
 ---
-title: "Census Income"
+title: "Census Income Modelling"
 author: "Anthony Banks"
-date: "12/8/2019"
+date: "12/24/2019"
 output: html_document
 ---
 
@@ -9,29 +9,46 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-##1.0 Introduction
+## 1.0 Introduction
 
-The following report documents the methods and procedures I used to create a prediction model on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: [https://www.kaggle.com/uciml/adult-census-income](https://www.kaggle.com/uciml/adult-census-income).  The original dataset consisted of the following 15 columns:
+The following report documents the methods and procedures I used to create prediction models on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: [https://www.kaggle.com/uciml/adult-census-income](https://www.kaggle.com/uciml/adult-census-income).  The original dataset consisted of the following 15 columns:
+
 * age (integer) - The age of each entry
+
 * workclass (string) - The workclass of each entry.  Options include: private, local government, federal government, self-employed
+
 * fnlwgt (integer) - The final weight of that row.  This relates to how many unique census entries were of this row's characteristics.  In order to preserve the tidy format of the dataset, I did not include the fnlwgt column in my computations.
+
 * education (string) - The highest form of education for each entry.  Options include: HS-grad, Masters, 10th
+
 * education.num (integer) - The total number of years spent in education for each entry
+
 * marital.status (string) - The marital status of each entry
+
 * occupation (string) - The occupation of each entry
+
 * relationship (string) - The family-relationship held by each entry.  Options include: Mother, Father, Not-in-Family, Unmarried
+
 * race (string) - The race of each entry
-* sex (string) - The sex of each entry
+
+* sex (string) - The gender of each entry
+
 * capital.gain (integer) - The capitol gain of each entry
+
 * capital.loss (integer) - The capitol loss of each entry
+
 * hours.per.week (integer) - The hours per week worked by each entry
+
 * native.country (string) - The native country of each entry
+
 * income (string) - The annual income of each entry as defined categorically as less than or equal to $50,000 (<=50K) and greater than $50,000 (>50K).
 
-I used the census dataset to generate a model that predicts income status as defined by **less than or equal to $50,000** or **greater than $50,000** based on that entry's status for the other attributes shown above.  
+I used the census dataset to generate models that predict income status as defined by **less than or equal to $50,000** or **greater than $50,000** based on that entry's status for the other attributes shown above.  
 
-##2.0 Methods
-###2.1 Data Preparation
+## 2.0 Methods
+
+### 2.1 Data Preparation
+
 ```{r, echo= FALSE, message=FALSE, warning=FALSE, error=FALSE}
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
@@ -60,7 +77,6 @@ library(knitr)
 file <- "adult-census-income.zip"
 dat <- read.csv(unzip(file))
 ```
-
 I downloaded the dataset as a zipped csv file, read it into R, and examined it for dimensionality and missing values.
 
 ```{r, echo= FALSE}
@@ -86,7 +102,8 @@ message("The training dataset had ", dim(training_dat)[1], " rows and ", dim(tra
 The testing dataset had ", dim(testing_dat)[1], " rows and ", dim(testing_dat)[2], " columns.")
 ```
 
-###2.2 Data Visualization and Interpretation
+### 2.2 Data Visualization and Interpretation
+
 I created a summary table and several graphs of the data so that I could explore the data for trends and outliers.  The summary table below shows the distribution of the two income categories.  The ">50K" income category was outnumbered approximately 3 to 1.  The uneven distribution of the income categories is significant enough to categories the dataset as unbalanced.  
 ```{r, echo = FALSE}
 
@@ -99,13 +116,30 @@ kable(income_table, caption = "Table 1. Income Status Distribution in the Traini
 A majority of the dataset's columns are categorical, thus making scatter plots insignificant.  I created histograms and density plots to visualize the distribution of the income statuses for the other variables in the dataset. 
 
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
 age_dense <- training_dat %>% ggplot(aes(age, fill = income)) + geom_density(stat ="count") + ggtitle("Graph 1. Age Distribution")
 age_dense
+```
+
+Graph 1 shows the two income categories have a significantly different trend with age.  The most common age for the <=50K group was approximately 24 years old, and the group had a decrease in entries for each successive age.  Alternatively, the most common age for the >50K group was in the range of approximately 30 to 50 years old. 
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
 gender_hist <- training_dat %>% ggplot(aes(sex, fill = income)) + geom_bar(position = position_dodge()) + ggtitle("Graph 2. Gender Distribution")
 gender_hist
+
+```
+
+Graph 2 reveals there were more male entries than female entries for both income categories, but males significantly outnumber females in the >50K group.  Graph 2 indicates that gender could be a significant predictor of income category.
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
 education_hist <- training_dat %>% ggplot(aes(education.num, fill = income)) + geom_histogram(binwidth = 1, position = position_dodge()) + ggtitle("Graph 3. Education Distribution")
 education_hist
+
+```
+
+Graph 3 shows that a majority of the entries have 9, 10, or 13 years of education for both income categories.  Those years of education relate to a high school education, one year of college, and 4 years of college, respectively.  Graph 3 shows the >50K group had a higher average years of education.  
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
 race_hist <- training_dat %>% ggplot(aes(race, fill = income)) + geom_histogram(stat="count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 4. Race Distribution")
 race_hist
 
@@ -114,62 +148,140 @@ race_table <- training_dat %>% group_by(race) %>%
 race_table <- race_table %>% mutate('Percent >50K' = (`Count >50K`) / ((`Count <=50K`) + (`Count >50K`)) *100)
 
 kable(race_table, caption = "Table 2. Income Status Distribution in the Training Dataset by Race")
-race_table
-
-workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 5. Workclass Distribution")
-workclass_hist
-hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80)) + ggtitle("Graph 6. Hours Worked Per Week Distribution")
-hours.per.week_freqpoly
-marital.status_hist <- training_dat %>% ggplot(aes(marital.status, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 7. Marital Status Distribution")
-marital.status_hist
-
 ```
-
-Graph 1 shows the two income categories have a significantly different trend with age.  The most common age for the <=50K group was approximately 24 years old, and the group had a decrease in entries for each successive age.  Alternatively, the most common age for the >50K group was in the range of approximately 30 to 50 years old.  
-
-Graph 2 reveals there were more male entries than female entries for both income categories, but males significantly outnumber females in the >50K group.  Graph 2 indicates that gender could be a significant predictor of income category.
-
-Graph 3 shows that a majority of the entries have 9, 10, or 13 years of education for both income categories.  Those years of education relate to a high school education, one year of college, and 4 years of college, respectively.  Graph 3 shows the >50K group had a higher average years of education.  
 
 Graph 4 reveals that a majority of the entries have the racial status white, but it also shows that very few non-white entries were in the >50K income category.  Table 2 shows that Asian-Pac-Islander have a similar percentage of entries in the >50K income category as the white entries, but all other races are half as likely to be in the >50K income category.  
 
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 5. Workclass Distribution")
+workclass_hist
+```
+
 Graph 5 shows the distribution of workclass among the entries.  A very large majority of the entries were in the private workclass, and the non-private workclasses, except for "?", "Never-worked", and "Without-pay", had a higher percentage of >50k income category entries than observed in the private workclass.  
 
-Graph 6 shows that both income categories were predominantly in the range of 38 to 44 hours per week, but the >50K income category has a higher percent of entries who work more than 44 hours per week.  
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+
+hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80)) + ggtitle("Graph 6. Hours Worked Per Week Distribution")
+
+```
+
+
+Graph 6 shows that both income categories were predominantly in the range of 38 to 44 hours per week, but the >50K income category has a higher percentage of entries who work more than 44 hours per week.  
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+hours.per.week_freqpoly
+marital.status_hist <- training_dat %>% ggplot(aes(marital.status, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 7. Marital Status Distribution")
+marital.status_hist
+```
 
 Graph 7 shows that a very high majority of the >50K income category are in the "Married-civ-spouse" marital status category.  It appears that the other marital status options could be used to predict an entry as not being in the >50K income group.  
 
+### 2.3 Modelling
 
-###2.3 Modelling
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r, echo=FALSE}
+training_dat <- training_dat %>% select(-c(fnlwgt,relationship, education))
 ```
 
-## Including Plots
+I trained each model using the training dataset described above, modified such that the data for "fnlwgt", "relationship", and "education" were removed;  those columns were removed because "fnlwgt" does not apply for the purposed of evaluating the dataset as if each row is for one unique entry.  Furthermore, "relationship" and "education" were reductant information that could be deduced from marital status and sex, and "education.num", respectively.  
 
-You can also embed plots, for example:
+I used the testing dataset to evaluate the permformance of each model based on it's F1-score, accuracy, sensitivity, and specificity; but ranked each model's success based on their F1-score.   
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+#### 2.3.1 Model 1
+
+For Model 1, I predicted <=50K for every entry.  Although I knew this model would be flawed, it provided useful baseline results to compare future models against.  Model 1 was reported with a sensitivity of 1.00 and a specificity of 0.00, because it was correct 100% of the time when the true value was <=50K, and it was correct 0% of the time when the true value was >50k.  Because the complete dataset is weighted in favor of the <=50K income category, Model 1 was reported with suprisingly high F1-score and accuracy. 
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+#Model 1:  Predicting <=50K for each entry because that's most common in our dataset
+income_pred <- rep("<=50K", length(testing_dat$income)) %>% factor()
+confusionMatrix(income_pred, reference = testing_dat$income)
+results1 <- confusionMatrix(income_pred, reference = testing_dat$income)
+'Model 1' <- as.table(c(results1$byClass["F1"] , results1$overall["Accuracy"], 
+                                results1$byClass["Sensitivity"] , results1$byClass["Specificity"]))
+results_table <- rbind(`Model 1`)
+results_table
+```
+#### 2.3.2 Model 2
+
+For Model 2, I trained a linear regression model.  There are no training parameters for the linear regression model, so it could not be fine tuned.  The reported F1 score, accuracy, and specificity of Model 2 increased from Model 1, and the sensitivity decreased.  However, the reported specificity of Model 2 is still significantly low.  Model 2 incorrectly predicts <=50K on approximately half the entries in the >50K group.  
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+#Model 2: Linear Regression 
+training_dat_as.num <- training_dat %>% mutate(income = as.numeric(income == ">50K"))
+train_lm <- train(income ~., method = "lm", data = training_dat_as.num)
+income_hat_as.num <- predict(train_lm, testing_dat)
+income_hat <- ifelse(income_hat_as.num > 0.5, ">50K", "<=50K") %>% factor()
+confusionMatrix(data = income_hat, reference = testing_dat$income)
+model.results_linear.regression <- confusionMatrix(data = income_hat, reference = testing_dat$income)
+results2 <- confusionMatrix(data = income_hat, reference = testing_dat$income)
+'Model 2' <- as.table(c(results2$byClass["F1"] , results2$overall["Accuracy"], 
+                                results2$byClass["Sensitivity"] , results2$byClass["Specificity"]))
+results_table <- rbind(results_table, `Model 2`)
+results_table
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#### 2.3.3 Model 3
+
+For Model 3, I trained a generalized linear model (GLM).  Similar to the linear regression model, GLM does not have any training parameters.  The reported F1-score, accuracy, and specificity of Model 3 increased from Model 2, and the sensitivity decreased.  The specificity of Model 3 is still lower than ideal, but it increased significantly from Model 2. 
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+#Model 3: Generalized Linear Model (GLM)
+train_glm <- train(income ~.,
+                   method = "glm",
+                   data = training_dat)
+income_hat_glm <- predict(train_glm, testing_dat)
+confusionMatrix(income_hat_glm, reference = testing_dat$income)
+results3 <- confusionMatrix(income_hat_glm, reference = testing_dat$income)
+'Model 3' <- as.table(c(results3$byClass["F1"] , results3$overall["Accuracy"], 
+                                results3$byClass["Sensitivity"] , results3$byClass["Specificity"]))
+results_table <- rbind(results_table, `Model 3`)
+results_table
+```
+
+#### 2.3.4 Model 4A and Model 4B
+
+For Model 4A and Model 4B, I trained regression tree models.  Regression tree models have a training parameter, the complexity parameter.  I trained Model 4A without adjusting the range of complexity parameter values, and trained Model 4B with a wide range of complexity parameter values.
+
+The overall performance of Model 4A was worse than Model 2 and Model 3.  
+
+Model 4B had overall performance similar to Model 3.  Model 4B's F1-score and sensitivity were greater than those values for Model 3, but Model 3's accuracy and specificity were greater than those value for Model 4B. 
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+#Model 4A: Regression Tree - standard (no adjusting tuning parameters)
+train_tree <- train(income ~ ., 
+                    method = "rpart",
+                    data = training_dat)
+income_hat_tree <- predict(train_tree, testing_dat)
+confusionMatrix(income_hat_tree, reference = testing_dat$income)
+results4a <- confusionMatrix(income_hat_tree, reference = testing_dat$income)
+'Model 4A' <- as.table(c(results4a$byClass["F1"] , results4a$overall["Accuracy"], 
+                               results4a$byClass["Sensitivity"] , results4a$byClass["Specificity"]))
+results_table <- rbind(results_table, `Model 4A`)
+results_table
+#Model 4B: Regression Tree - adjusting complexity parameter (cp)
+train_tree_cp <- train(income ~., 
+                       method = "rpart",
+                       tuneGrid = data.frame(cp = seq(0, 0.05, len = 25)),
+                       data = training_dat)
+ggplot(train_tree_cp, highlight = TRUE) + ggtitle("Graph 8. Estimated Accuracy vs Complexity Parameter in Model 4B")
+prp(train_tree_cp$finalModel, main = "Figure 1. Decision Tree of Model 4B")
+income_hat_tree_cp <- predict(train_tree_cp, testing_dat)
+confusionMatrix(income_hat_tree_cp, reference = testing_dat$income)
+results4b <- confusionMatrix(income_hat_tree_cp, reference = testing_dat$income)
+'Model 4B' <- as.table(c(results4b$byClass["F1"] , results4b$overall["Accuracy"], 
+                               results4b$byClass["Sensitivity"] , results4b$byClass["Specificity"]))
+results_table <- rbind(results_table, `Model 4B`)
+results_table
+```
+
+## 3.0 Results 
+
+Model 3, GLM, and Model 4B, regression tree model with an adjusted complexity parameter range, produced similar model success, however, Model 4B resulted in the highest F1-score and therefore was selected as the best model in this report.  All of the models showed significant bias towards predicting <=50K because of the unbalanced dataset.  
+
+```{r, echo=FALSE}
+results_table
+```
+
+## 4.0 Conclusions
+
+I used the census dataset to generate models that predict income status as defined by **less than or equal to $50,000** or **greater than $50,000** based on that entry's status for the other attributes in the dataset.  I had the most success, as evaluated by the F1-score, when using a regression tree model with an adjusted range of the complexity parameter.  However, all of the models were significantly biased from the unbalanced nature of the dataset.  In order to improve the success of predicting income status based on the parameters presented in the original dataset, future modelling efforts should include ways to counteract the unbalanced nature of the dataset, such as with undersampling or oversampling.  
+
+
+
+
