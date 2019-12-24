@@ -9,9 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction
+##1.0 Introduction
 
-The following report documents the methods and procedures I used to create a prediction model on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: https://www.kaggle.com/uciml/adult-census-income.  The original dataset consisted of the following 15 columns:
+The following report documents the methods and procedures I used to create a prediction model on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: [https://www.kaggle.com/uciml/adult-census-income](https://www.kaggle.com/uciml/adult-census-income).  The original dataset consisted of the following 15 columns:
 * age (integer) - The age of each entry
 * workclass (string) - The workclass of each entry.  Options include: private, local government, federal government, self-employed
 * fnlwgt (integer) - The final weight of that row.  This relates to how many unique census entries were of this row's characteristics.  In order to preserve the tidy format of the dataset, I did not include the fnlwgt column in my computations.
@@ -28,44 +28,119 @@ The following report documents the methods and procedures I used to create a pre
 * native.country (string) - The native country of each entry
 * income (string) - The annual income of each entry as defined categorically as less than or equal to $50,000 (<=50K) and greater than $50,000 (>50K).
 
-I used the census dataset to generate a model that predicts the categorical income of an entry given the other attributes of that entry.  
+I used the census dataset to generate a model that predicts income status as defined by **less than or equal to $50,000** or **greater than $50,000** based on that entry's status for the other attributes shown above.  
 
-
-## Methods
-### Data Preparation
-```{r, echo= FALSE, message=FALSE}
+##2.0 Methods
+###2.1 Data Preparation
+```{r, echo= FALSE, message=FALSE, warning=FALSE, error=FALSE}
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(fastAdaboost)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(rattle)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(rpart.plot)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(mboost)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(plyr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")		
+if(!require(knitr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")	
 library(tidyverse)
 library(caret)
 library(ggplot2)
-library(rpart)				       
+library(rpart)
+library(fastAdaboost)
+library(rattle)
+library(rpart.plot)
+library(mboost)
+library(plyr)
+library(knitr)
 
-library(rattle)					
-library(rpart.plot)			
+
+
 
 file <- "adult-census-income.zip"
-
 dat <- read.csv(unzip(file))
-
 ```
 
-The dataset was downloaded from Kaggle.com as a zipped csv file.  I read in the dataset and examined it for dimensionality and completeness. 
+I downloaded the dataset as a zipped csv file, read it into R, and examined it for dimensionality and missing values.
 
 ```{r, echo= FALSE}
 dim.dat <- dim(dat)
 dat.na <- sum(is.na(dat$income))
-message("The data has ", dim.dat[1], " rows,  ", dim.dat[2], " columns, and ", 
-        dat.na, " missing values (NA).")
+message("The original dataset had ", dim.dat[1], " rows,  ", dim.dat[2], " columns, and ", 
+        dat.na, " missing values.")
 ```
 
-Next, I randomly split the original dataset into training and testing datasets comprised of 90% and 10% of the original dataset, respectively.  
+Next, I randomly split the original dataset into training and testing datasets comprised of 90% and 10% of the original dataset, respectively.  I used the training dataset to create visualizations, look for trends, and to ultimately train the models.  The testing dataset was strictly used for the sole purpose of evaluating the final success of each model.  The use of the testing dataset for anything beyond the evaluation of each final model could overtrain the model and provide poor success on future datasets.
+
+```{r, echo=FALSE}
+test_index <- createDataPartition(y = dat$income, p = 0.1, list = FALSE)
 
 
+training_dat <- dat[-test_index,]
+testing_dat <- dat[test_index,]
+
+```
+
+```{r, echo=FALSE}
+message("The training dataset had ", dim(training_dat)[1], " rows and ", dim(training_dat)[2], " columns.
+The testing dataset had ", dim(testing_dat)[1], " rows and ", dim(testing_dat)[2], " columns.")
+```
+
+###2.2 Data Visualization and Interpretation
+I created a summary table and several graphs of the data so that I could explore the data for trends and outliers.  The summary table below shows the distribution of the two income categories.  The ">50K" income category was outnumbered approximately 3 to 1.  The uneven distribution of the income categories is significant enough to categories the dataset as unbalanced.  
+```{r, echo = FALSE}
+
+income_table <- training_dat %>% group_by(income) %>% 
+  dplyr::summarise(Count=n(), Percent = n()/(length(training_dat$income))*100)
+kable(income_table, caption = "Table 1. Income Status Distribution in the Training Dataset", digits = c(2, 0, 1))
+
+```
+
+A majority of the dataset's columns are categorical, thus making scatter plots insignificant.  I created histograms and density plots to visualize the distribution of the income statuses for the other variables in the dataset. 
 
 
+```{r, echo = FALSE}
+age_dense <- training_dat %>% ggplot(aes(age, fill = income)) + geom_density(stat ="count") + ggtitle("Graph 1. Age Distribution")
+age_dense
+gender_hist <- training_dat %>% ggplot(aes(sex, fill = income)) + geom_bar(position = position_dodge()) + ggtitle("Graph 2. Gender Distribution")
+gender_hist
+education_hist <- training_dat %>% ggplot(aes(education.num, fill = income)) + geom_histogram(binwidth = 1, position = position_dodge()) + ggtitle("Graph 3. Education Distribution")
+education_hist
+race_hist <- training_dat %>% ggplot(aes(race, fill = income)) + geom_histogram(stat="count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 4. Race Distribution")
+race_hist
+
+race_table <- training_dat %>% group_by(race) %>% 
+  dplyr::summarise('Count <=50K' = sum(income == "<=50K"), 'Count >50K' = sum(income == ">50K"))
+race_table <- race_table %>% mutate('Percent >50K' = (`Count >50K`) / ((`Count <=50K`) + (`Count >50K`)) *100)
+
+kable(race_table, caption = "Table 2. Income Status Distribution in the Training Dataset by Race")
+race_table
+
+workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 5. Workclass Distribution")
+workclass_hist
+hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80)) + ggtitle("Graph 6. Hours Worked Per Week Distribution")
+hours.per.week_freqpoly
+marital.status_hist <- training_dat %>% ggplot(aes(marital.status, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 7. Marital Status Distribution")
+marital.status_hist
+
+```
+
+Graph 1 shows the two income categories have a significantly different trend with age.  The most common age for the <=50K group was approximately 24 years old, and the group had a decrease in entries for each successive age.  Alternatively, the most common age for the >50K group was in the range of approximately 30 to 50 years old.  
+
+Graph 2 reveals there were more male entries than female entries for both income categories, but males significantly outnumber females in the >50K group.  Graph 2 indicates that gender could be a significant predictor of income category.
+
+Graph 3 shows that a majority of the entries have 9, 10, or 13 years of education for both income categories.  Those years of education relate to a high school education, one year of college, and 4 years of college, respectively.  Graph 3 shows the >50K group had a higher average years of education.  
+
+Graph 4 reveals that a majority of the entries have the racial status white, but it also shows that very few non-white entries were in the >50K income category.  Table 2 shows that Asian-Pac-Islander have a similar percentage of entries in the >50K income category as the white entries, but all other races are half as likely to be in the >50K income category.  
+
+Graph 5 shows the distribution of workclass among the entries.  A very large majority of the entries were in the private workclass, and the non-private workclasses, except for "?", "Never-worked", and "Without-pay", had a higher percentage of >50k income category entries than observed in the private workclass.  
+
+Graph 6 shows that both income categories were predominantly in the range of 38 to 44 hours per week, but the >50K income category has a higher percent of entries who work more than 44 hours per week.  
+
+Graph 7 shows that a very high majority of the >50K income category are in the "Married-civ-spouse" marital status category.  It appears that the other marital status options could be used to predict an entry as not being in the >50K income group.  
 
 
-
-
+###2.3 Modelling
 
 
 

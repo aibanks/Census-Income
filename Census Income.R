@@ -6,27 +6,23 @@ if(!require(rpart)) install.packages("tidyverse", repos = "http://cran.us.r-proj
 if(!require(fastAdaboost)) install.packages("caret", repos = "http://cran.us.r-project.org")
 if(!require(rattle)) install.packages("data.table", repos = "http://cran.us.r-project.org")
 if(!require(rpart.plot)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
-
-
-
-
-
-
-
-
-
-
-
-
+if(!require(mboost)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(plyr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(knitr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")	
 
 library(tidyverse)
 library(caret)
 library(ggplot2)
-library(rpart)	
+library(rpart)
 library(fastAdaboost)
+library(rattle)
+library(rpart.plot)
+library(mboost)
+library(plyr)
+library(knitr)
 
-library(rattle)					
-library(rpart.plot)			
+install.packages("recipes")
+
 
 file <- "adult-census-income.zip"
 
@@ -49,34 +45,40 @@ dim(testing_dat)
 #####################################
 ##Data inspection and visualization##
 #####################################
-training_dat %>% group_by(income) %>% 
-  summarize(Count=n(), Percent = n()/(length(training_dat$income)))
+training_dat %>% group_by(income) %>% c(Count=n(), Percent = n()/(length(training_dat$income))*100)
 
-age_dense <- training_dat %>% ggplot(aes(age, fill = income)) + geom_density(stat ="count") 
+
+
+age_dense <- training_dat %>% ggplot(aes(age, fill = income)) + geom_density(stat ="count") + ggtitle("Graph 1. Age Distribution")
 age_dense
 
-gender_hist <- training_dat %>% ggplot(aes(sex, fill = income)) + geom_bar(position = position_dodge())
+gender_hist <- training_dat %>% ggplot(aes(sex, fill = income)) + geom_bar(position = position_dodge()) + ggtitle("Graph 2. Gender Distribution")
 gender_hist
 
-education_hist <- training_dat %>% ggplot(aes(education.num, fill = income)) + geom_histogram(binwidth = 1, position = position_dodge()) #+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+education_hist <- training_dat %>% ggplot(aes(education.num, fill = income)) + geom_histogram(binwidth = 1, position = position_dodge()) + ggtitle("Graph 3. Education Distribution")
 education_hist
 
-race_hist <- training_dat %>% ggplot(aes(race, fill = income)) + geom_histogram(stat="count", position = position_dodge())
+race_hist <- training_dat %>% ggplot(aes(race, fill = income)) + geom_histogram(stat="count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 4. Race Distribution")
 race_hist
+
+race_table <- training_dat %>% group_by(race) %>% 
+  dplyr::summarise('Count <=50K' = sum(income == "<=50K"), 'Count >50K' = sum(income == ">50K"))
+race_table <- race_table %>% mutate('Percent >50K' = (`Count >50K`) / ((`Count <=50K`) + (`Count >50K`)) *100)
+race_table
 
 race.edu_graph <- training_dat %>% ggplot(aes(race, education.num, color = income)) + geom_boxplot()
 race.edu_graph
 
-workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 5. Workclass Distribution")
 workclass_hist
 
 #hours.per.week_hist <- training_dat %>% ggplot(aes(hours.per.week, fill = income)) +geom_histogram(binwidth = 10, position = position_dodge(), col="black")
 #hours.per.week_hist
 
-hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80))
+hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80)) + ggtitle("Graph 6. Hours Worked Per Week Distribution")
 hours.per.week_freqpoly
 
-marital.status_hist <- training_dat %>% ggplot(aes(marital.status, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+marital.status_hist <- training_dat %>% ggplot(aes(marital.status, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 7. Marital Status Distribution")
 marital.status_hist
 
 native.country_hist <- training_dat %>% ggplot(aes(native.country, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -85,13 +87,6 @@ native.country_hist
 native.county_table <- training_dat %>% group_by(native.country) %>%
   summarize(sum(income == "<=50K"), sum(income == ">50K"))
 native.county_table
-
-native.county_table <- native.county_table %>% mutate("percent_>50K" = (`sum(income == ">50K")`)/(`sum(income == ">50K")` + `sum(income == "<=50K")`)*100)
-
-native.county_table <- native.county_table %>% arrange(desc(`percent_>50K`))
-
-head(native.county_table, 5)
-tail(native.county_table, 5)
 
 ########################################
 ####Data Cleanse########################
@@ -326,15 +321,15 @@ confusionMatrix(income_hat_tree, reference = testing_dat_undersample$income)
 #Undersampled Test and Training Sets:  Accuracy = 0.7707, Sens. = 0.6713, Spec = 0.8701, Balanced Acc. = 0.7707
 
 #Model 5: AdaBoost Classification Trees
-train_adaboost <- train(income ~.,
-                        method = "adaboost",
+
+train_glmboost <- train(income~.,
+                        method = "glmboost",
                         data = training_dat)
 
-income_hat_adaboost <- predict(train_adaboost, testing_dat)
-confusionMatrix(income_hat_adaboost, reference = testing_dat$income)
+income_hat_glmboost <- predict(train_glmboost, testing_dat)
+confusionMatrix(income_hat_glmboost, reference = testing_dat$income)
 
-#started 17:06  stopped at 17:16 (took too long)
-
+#started at 18:43  
 
 
 
