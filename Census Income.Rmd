@@ -1,5 +1,5 @@
 ---
-title: "Census Income Modelling"
+title: "Census Income Modeling"
 author: "Anthony Banks"
 date: "12/24/2019"
 output: html_document
@@ -89,6 +89,7 @@ message("The original dataset had ", dim.dat[1], " rows,  ", dim.dat[2], " colum
 Next, I randomly split the original dataset into training and testing datasets comprised of 90% and 10% of the original dataset, respectively.  I used the training dataset to create visualizations, look for trends, and to ultimately train the models.  The testing dataset was strictly used for the sole purpose of evaluating the final success of each model.  The use of the testing dataset for anything beyond the evaluation of each final model could overtrain the model and provide poor success on future datasets.
 
 ```{r, echo=FALSE}
+set.seed(1993, sample.kind = "Rounding")
 test_index <- createDataPartition(y = dat$income, p = 0.1, list = FALSE)
 
 
@@ -166,6 +167,7 @@ hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = 
 ```
 
 
+
 Graph 6 shows that both income categories were predominantly in the range of 38 to 44 hours per week, but the >50K income category has a higher percentage of entries who work more than 44 hours per week.  
 
 ```{r, echo = FALSE, message=FALSE, warning=FALSE}
@@ -238,7 +240,7 @@ results_table
 
 For Model 4A and Model 4B, I trained regression tree models.  Regression tree models have a training parameter, the complexity parameter.  I trained Model 4A without adjusting the range of complexity parameter values, and trained Model 4B with a wide range of complexity parameter values.
 
-The overall performance of Model 4A was worse than Model 2 and Model 3.  
+The overall performance of Model 4A was worse than Model 3.  
 
 Model 4B had overall performance similar to Model 3.  Model 4B's F1-score and sensitivity were greater than those values for Model 3, but Model 3's accuracy and specificity were greater than those value for Model 4B. 
 
