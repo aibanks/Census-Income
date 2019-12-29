@@ -1,8 +1,8 @@
 ---
 title: "Census Income Modeling"
 author: "Anthony Banks"
-date: "12/24/2019"
-output: html_document
+date: "12/29/2019"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 1.0 Introduction
 
-The following report documents the methods and procedures I used to create prediction models on a dataset of census information.  I obtained the dataset from Kaggle.com at the following link: [https://www.kaggle.com/uciml/adult-census-income](https://www.kaggle.com/uciml/adult-census-income).  The original dataset consisted of the following 15 columns:
+The following report documents the methods and procedures I used to create prediction models on a dataset of census information.  I obtained the dataset from Kaggle.com at the following URL: [https://www.kaggle.com/uciml/adult-census-income](https://www.kaggle.com/uciml/adult-census-income).  The original dataset consisted of the following 15 columns:
 
 * age (integer) - The age of each entry
 
@@ -60,6 +60,7 @@ if(!require(rpart.plot)) install.packages("tidyverse", repos = "http://cran.us.r
 if(!require(mboost)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(plyr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")		
 if(!require(knitr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")	
+
 library(tidyverse)
 library(caret)
 library(ggplot2)
@@ -88,7 +89,7 @@ message("The original dataset had ", dim.dat[1], " rows,  ", dim.dat[2], " colum
 
 Next, I randomly split the original dataset into training and testing datasets comprised of 90% and 10% of the original dataset, respectively.  I used the training dataset to create visualizations, look for trends, and to ultimately train the models.  The testing dataset was strictly used for the sole purpose of evaluating the final success of each model.  The use of the testing dataset for anything beyond the evaluation of each final model could overtrain the model and provide poor success on future datasets.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(1993, sample.kind = "Rounding")
 test_index <- createDataPartition(y = dat$income, p = 0.1, list = FALSE)
 
@@ -110,7 +111,7 @@ I created a summary table and several graphs of the data so that I could explore
 
 income_table <- training_dat %>% group_by(income) %>% 
   dplyr::summarise(Count=n(), Percent = n()/(length(training_dat$income))*100)
-kable(income_table, caption = "Table 1. Income Status Distribution in the Training Dataset", digits = c(2, 0, 1))
+kable(income_table, caption = "Income Status Distribution in the Training Dataset", digits = c(2, 0, 1))
 
 ```
 
@@ -148,10 +149,10 @@ race_table <- training_dat %>% group_by(race) %>%
   dplyr::summarise('Count <=50K' = sum(income == "<=50K"), 'Count >50K' = sum(income == ">50K"))
 race_table <- race_table %>% mutate('Percent >50K' = (`Count >50K`) / ((`Count <=50K`) + (`Count >50K`)) *100)
 
-kable(race_table, caption = "Table 2. Income Status Distribution in the Training Dataset by Race")
+kable(race_table, caption = "Income Status Distribution in the Training Dataset by Race", digits = 3)
 ```
 
-Graph 4 reveals that a majority of the entries have the racial status white, but it also shows that very few non-white entries were in the >50K income category.  Table 2 shows that Asian-Pac-Islander have a similar percentage of entries in the >50K income category as the white entries, but all other races are half as likely to be in the >50K income category.  
+Graph 4 reveals that a majority of the entries are White, but it also shows that very few non-White entries were in the >50K income category.  Table 2 shows that the percentage of Asian-Pac-Islander and White entries in the >50K category is more than double the percentage in the >50K income category for the other races.    
 
 ```{r, echo = FALSE, message=FALSE, warning=FALSE}
 workclass_hist <- training_dat %>% ggplot(aes(workclass, fill = income)) + geom_histogram(stat = "count", position = position_dodge()) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Graph 5. Workclass Distribution")
@@ -161,12 +162,8 @@ workclass_hist
 Graph 5 shows the distribution of workclass among the entries.  A very large majority of the entries were in the private workclass, and the non-private workclasses, except for "?", "Never-worked", and "Without-pay", had a higher percentage of >50k income category entries than observed in the private workclass.  
 
 ```{r, echo = FALSE, message=FALSE, warning=FALSE}
-
 hours.per.week_freqpoly <- training_dat %>% ggplot(aes(hours.per.week, colour = income)) + geom_freqpoly(binwidth = 6) + scale_x_continuous(limits=c(0, 80)) + ggtitle("Graph 6. Hours Worked Per Week Distribution")
-
 ```
-
-
 
 Graph 6 shows that both income categories were predominantly in the range of 38 to 44 hours per week, but the >50K income category has a higher percentage of entries who work more than 44 hours per week.  
 
