@@ -10,6 +10,7 @@ if(!require(mboost)) install.packages("tidyverse", repos = "http://cran.us.r-pro
 if(!require(plyr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(knitr)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")	
 
+##Load the required libraries
 library(tidyverse)
 library(caret)
 library(ggplot2)
@@ -20,7 +21,6 @@ library(rpart.plot)
 library(mboost)
 library(plyr)
 library(knitr)
-
 
 ##Read in the file
 file <- "adult-census-income.zip"
@@ -103,6 +103,7 @@ confusionMatrix(income_pred, reference = testing_dat$income)
 results1 <- confusionMatrix(income_pred, reference = testing_dat$income)
 'Model 1' <- as.table(c(results1$byClass["F1"] , results1$overall["Accuracy"], 
                                 results1$byClass["Sensitivity"] , results1$byClass["Specificity"]))
+##Saving results from Model 1 to a Model Results Summary Table
 results_table <- rbind(`Model 1`)
 results_table
 
@@ -118,9 +119,9 @@ model.results_linear.regression <- confusionMatrix(data = income_hat, reference 
 results2 <- confusionMatrix(data = income_hat, reference = testing_dat$income)
 'Model 2' <- as.table(c(results2$byClass["F1"] , results2$overall["Accuracy"], 
                                 results2$byClass["Sensitivity"] , results2$byClass["Specificity"]))
+##Saving results from Model 2 to the Model Results Summary Table
 results_table <- rbind(results_table, `Model 2`)
 results_table
-
 
 #Model 3: Generalized Linear Model (GLM)
 train_glm <- train(income ~.,
@@ -132,6 +133,7 @@ confusionMatrix(income_hat_glm, reference = testing_dat$income)
 results3 <- confusionMatrix(income_hat_glm, reference = testing_dat$income)
 'Model 3' <- as.table(c(results3$byClass["F1"] , results3$overall["Accuracy"], 
                                 results3$byClass["Sensitivity"] , results3$byClass["Specificity"]))
+##Saving results from Model 3 to the Model Results Summary Table
 results_table <- rbind(results_table, `Model 3`)
 results_table
 
@@ -150,7 +152,7 @@ results4a <- confusionMatrix(income_hat_tree, reference = testing_dat$income)
 
 'Model 4A' <- as.table(c(results4a$byClass["F1"] , results4a$overall["Accuracy"], 
                                results4a$byClass["Sensitivity"] , results4a$byClass["Specificity"]))
-
+##Saving results from Model 4A to the Model Results Summary Table
 results_table <- rbind(results_table, `Model 4A`)
 results_table
 
@@ -170,6 +172,6 @@ results4b <- confusionMatrix(income_hat_tree_cp, reference = testing_dat$income)
 
 'Model 4B' <- as.table(c(results4b$byClass["F1"] , results4b$overall["Accuracy"], 
                                results4b$byClass["Sensitivity"] , results4b$byClass["Specificity"]))
-
+##Saving results from Model 4B to the Model Results Summary Table
 results_table <- rbind(results_table, `Model 4B`)
 results_table
